@@ -178,10 +178,10 @@ function logic() {
     salas.forEach((s, i) => {
         if(s.isSpinning) {
             let timeLeft = s.endTime - now;
-            let totalSpinTime = 60000; // 1 MINUTO EXACTO
+            let totalSpinTime = 60000;
             let elapsed = totalSpinTime - timeLeft;
             if(timeLeft <= 0) {
-                s.isSpinning = false; s.isWaiting = true; s.endTime = now + 5000; // PAUSA 5 SEGUNDOS
+                s.isSpinning = false; s.isWaiting = true; s.endTime = now + 5000;
                 s.lastWinner = getWinningNumber();
                 let winnerData = s.sold.find(x => x.n === s.lastWinner);
                 let premioMonto = PREMIOS[s.currentGiro];
@@ -191,17 +191,19 @@ function logic() {
                 }
                 historial.push({ u: winnerData ? winnerData.u : 'Nadie', sala: s.id, ganador: s.lastWinner, premio: premioMonto, fecha: new Date().toLocaleString() });
                 if(i === sSel) { 
-                    confetti({particleCount: 150, spread: 70, origin: {y: 0.6}, ticks: 300}); 
+                    // CONFETTI TIPO LLUVIA (SIN CIRCULO)
+                    confetti({ particleCount: 100, spread: 70, origin: { x: 0.1, y: 0.5 } });
+                    confetti({ particleCount: 100, spread: 70, origin: { x: 0.9, y: 0.5 } });
                     document.getElementById('live-counter').innerText = `¡GANADOR: #${s.lastWinner}!`; 
                     updateUI(); 
                 }
                 change = true;
             } else if(i === sSel) {
-                let speed = 0.4; 
-                // DESACELERACIÓN NATURAL (Inicia a los 40 segundos del giro)
-                if (elapsed > 40000) { 
-                    let decelProgress = (elapsed - 40000) / 20000; 
-                    speed = Math.max(0.0015, 0.4 * Math.pow(1 - decelProgress, 3)); 
+                let speed = 0.45; 
+                // DESACELERACIÓN ULTRA NATURAL (Inicia lento desde los 35 seg)
+                if (elapsed > 35000) { 
+                    let decelProgress = (elapsed - 35000) / 25000; 
+                    speed = Math.max(0.001, 0.45 * Math.pow(1 - decelProgress, 4)); 
                 }
                 ang += speed; draw(); 
                 document.getElementById('live-counter').innerText = `SORTEANDO: ${getWinningNumber()}`;
@@ -211,7 +213,6 @@ function logic() {
                 s.isWaiting = false;
                 if(s.currentGiro < 3) { s.currentGiro++; s.isSpinning = true; s.endTime = now + 60000; }
                 else { 
-                    // REINICIO AUTOMÁTICO
                     setTimeout(() => { s.currentGiro = 0; s.count = 0; s.sold = []; s.lastWinner = null; save(); renderGrid(); renderNumbers(); }, 3000); 
                 }
                 change = true;
@@ -238,13 +239,10 @@ function draw() {
 }
 
 function setSala(i) { 
-    sSel = i; 
-    localStorage.setItem('GCT_S_SEL', i); 
-    mySelection = []; 
+    sSel = i; localStorage.setItem('GCT_S_SEL', i); mySelection = []; 
     document.getElementById('sala-txt').innerText = `SALA #${salas[i].id}`; 
     document.getElementById('live-counter').innerText = ""; 
-    renderGrid(); 
-    renderNumbers(); 
+    renderGrid(); renderNumbers(); 
 }
 
 function comprarSeleccion() { 
@@ -297,10 +295,7 @@ function toggleNum(n) { if(mySelection.includes(n)) mySelection = mySelection.fi
 function updateStatus() { 
     let s = salas[sSel], st = document.getElementById('status-txt'); 
     if(s.isSpinning) st.innerText = `GIRO ${s.currentGiro} EN PROGRESO...`; 
-    else if(s.isWaiting) {
-        if(s.lastWinner) st.innerText = `GIRO TERMINADO`;
-        else st.innerText = "";
-    }
+    else if(s.isWaiting) st.innerText = s.lastWinner ? `GIRO TERMINADO` : "";
     else st.innerText = ""; 
 }
 
@@ -375,4 +370,3 @@ function rechazarWith(idx) { let w = pendingWiths[idx]; let u = users.find(x => 
 
 </body>
 </html>
-
