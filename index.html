@@ -168,7 +168,6 @@ function logic() {
                 s.isSpinning = false; s.isWaiting = true; s.endTime = now + 5000;
                 s.lastWinner = getWinningNumber();
                 
-                // PAGAR AUTOMÁTICAMENTE
                 let winnerData = s.sold.find(x => x.n === s.lastWinner);
                 let premioMonto = PREMIOS[s.currentGiro];
                 if(winnerData) {
@@ -186,14 +185,15 @@ function logic() {
 
                 if(i === sSel) {
                     confetti({particleCount: 200, spread: 100, origin: {y: 0.6}});
-                    document.getElementById('live-counter').innerText = "";
+                    document.getElementById('live-counter').innerText = `¡GANADOR: #${s.lastWinner}!`;
                     updateUI();
                 }
                 change = true;
             } else if(i === sSel) {
-                ang += 0.25; 
+                let progress = timeLeft / 15000;
+                ang += Math.max(0.01, Math.pow(progress, 3) * 0.4); 
                 draw();
-                document.getElementById('live-counter').innerText = `SORTEANDO...`;
+                document.getElementById('live-counter').innerText = `GIRO ${s.currentGiro} EN PROGRESO...`;
             }
         } else if(s.isWaiting) {
             if(now >= s.endTime) {
@@ -203,7 +203,6 @@ function logic() {
                     s.isSpinning = true; 
                     s.endTime = now + 15000; 
                 } else { 
-                    // RESET AUTOMÁTICO DESPUÉS DE 3 SEGUNDOS
                     setTimeout(() => {
                         s.currentGiro = 0; s.count = 0; s.sold = []; s.lastWinner = null;
                         save(); renderGrid(); renderNumbers();
@@ -261,11 +260,13 @@ function openM(t) {
     const c = document.getElementById('modal-content'); 
     document.getElementById('modal').style.display='flex'; 
     if(t==='auth') { 
-        c.innerHTML = `<h3>LOGIN</h3><input id="li-u" placeholder="Correo"><div class="password-wrapper"><input id="li-p" type="password" placeholder="Clave"><span class="eye-icon" onclick="togglePass('li-p')">👁️</span></div><button onclick="login()" style="width:100%; margin-top:10px;">ENTRAR</button><div class="auth-links"><span onclick="openM('reg')">Registrarse</span></div>`; 
+        c.innerHTML = `<h3>LOGIN</h3><input id="li-u" placeholder="Correo"><div class="password-wrapper"><input id="li-p" type="password" placeholder="Clave"><span class="eye-icon" onclick="togglePass('li-p')">👁️</span></div><button onclick="login()" style="width:100%; margin-top:10px;">ENTRAR</button><div class="auth-links"><span onclick="openM('reg')">Registrarse</span> | <span onclick="alert('Contacte a soporte para recuperar su clave')">Olvidé mi clave</span></div>`; 
     } else if(t==='reg') { 
-        c.innerHTML = `<h3>REGISTRO</h3><input id="re-u" placeholder="Correo electrónico"><div class="password-wrapper"><input id="re-p" type="password" placeholder="Crear Clave"><span class="eye-icon" onclick="togglePass('re-p')">👁️</span></div><button onclick="register()" style="width:100%; margin-top:10px;">CREAR CUENTA</button>`; 
+        c.innerHTML = `<h3>REGISTRO</h3><input id="re-u" placeholder="Correo electrónico"><div class="password-wrapper"><input id="re-p" type="password" placeholder="Crear Clave"><span class="eye-icon" onclick="togglePass('re-p')">👁️</span></div><button onclick="register()" style="width:100%; margin-top:10px;">CREAR CUENTA</button><div class="auth-links"><span onclick="openM('auth')">Ya tengo cuenta</span></div>`; 
     } else if(t==='dep') { 
         c.innerHTML = `<h3>RECARGAR</h3><div class="wallet-box">TRC20: <b>TFtX2tLdjqTnTdVAUfQ8YNACv6QUAK9LAy</b></div><input id="dep-amt" type="number" placeholder="Monto $"><div class="upload-box" onclick="document.getElementById('f-in').click()">+ COMPROBANTE<input type="file" id="f-in" hidden onchange="previewFile()"><img id="preview-img"></div><button onclick="notificarPago()" style="width:100%">ENVIAR</button>`; 
+    } else if(t==='with') { 
+        c.innerHTML = `<h3>RETIRAR</h3><input id="wi-amt" type="number" placeholder="Monto $"><input id="wi-wallet" placeholder="Tu Billetera TRC20"><button onclick="solicitarRetiro()" style="width:100%; background:var(--red); color:#fff;">RETIRAR</button>`; 
     } else if(t==='hist') { 
         let myHist = historial.filter(h => h.u === currentU.u || h.u === 'ADMIN_GLOBAL');
         c.innerHTML = `<h3>HISTORIAL</h3><div style="max-height:200px; overflow-y:auto; font-size:11px;">` + 
@@ -297,7 +298,7 @@ function toggleNum(n) { if(mySelection.includes(n)) mySelection = mySelection.fi
 function updateStatus() { 
     let s = salas[sSel], st = document.getElementById('status-txt'); 
     if(s.isSpinning) st.innerText = `GIRO ${s.currentGiro}...`; 
-    else if(s.isWaiting) st.innerText = `¡GANADOR: #${s.lastWinner}!`; 
+    else if(s.isWaiting) st.innerText = `GIRO TERMINADO`; 
     else st.innerText = ""; 
 }
 
@@ -316,21 +317,19 @@ function showProfile() {
 }
 
 function updateUI() { if(currentU && currentU.u !== "ADMIN_GLOBAL") document.getElementById('prof-balance').innerText = `$${currentU.b.toFixed(2)}`; }
-
 function logout() { localStorage.removeItem('GCT_SESSION'); location.reload(); }
-
 function closeM() { document.getElementById('modal').style.display='none'; tempImg=""; }
 
 function register() { 
     let u = document.getElementById('re-u').value, p = document.getElementById('re-p').value; 
-    if(u && p) { users.push({u, p, b: 0}); save(); alert("Registrado"); openM('auth'); }
+    if(u && p) { users.push({u, p, b: 0}); save(); alert("Registrado con éxito"); openM('auth'); }
 }
 
 function login() { 
     let u = document.getElementById('li-u').value, p = document.getElementById('li-p').value; 
     if(u==="ADMIN_GLOBAL" && p==="CASH_TIME_2026") { localStorage.setItem('GCT_SESSION', u); location.reload(); return; } 
     let user = users.find(x=>x.u===u && x.p===p); 
-    if(user) { localStorage.setItem('GCT_SESSION', u); location.reload(); } else alert("Error"); 
+    if(user) { localStorage.setItem('GCT_SESSION', u); location.reload(); } else alert("Credenciales Incorrectas"); 
 }
 
 function previewFile() { 
@@ -344,20 +343,29 @@ function notificarPago() {
     let a = parseFloat(document.getElementById('dep-amt').value); 
     if(a > 0 && tempImg) { 
         pendingDeps.push({ u: currentU.u, a: a, img: tempImg }); 
-        save(); alert("Enviado."); closeM(); 
+        save(); alert("Solicitud de recarga enviada."); closeM(); 
     } else alert("Faltan datos");
+}
+
+function solicitarRetiro() {
+    let a = parseFloat(document.getElementById('wi-amt').value);
+    if(a > 0 && currentU.b >= a) {
+        currentU.b -= a;
+        historial.push({ u: currentU.u, msg: `Retiro Solicitado: -$${a}`, fecha: new Date().toLocaleString() });
+        save(); alert("Retiro en proceso."); closeM(); updateUI();
+    } else alert("Saldo insuficiente");
 }
 
 function renderAdmin() { 
     const div = document.getElementById('pending-deps'); 
-    div.innerHTML = pendingDeps.length === 0 ? "Vacío" : ""; 
+    div.innerHTML = pendingDeps.length === 0 ? "Sin pagos pendientes" : ""; 
     pendingDeps.forEach((p, idx) => { 
         div.innerHTML += `<div class="admin-notif">
-            <b>${p.u}: $${p.a}</b><br>
-            <img src="${p.img}" style="width:100px; cursor:pointer;" onclick="window.open(this.src)">
-            <div style="margin-top:5px;">
-                <button style="background:var(--green); border:none; padding:5px; width:45%;" onclick="aprobar(${idx})">APROBAR</button>
-                <button style="background:var(--red); border:none; padding:5px; width:45%; color:white;" onclick="rechazar(${idx})">RECHAZAR</button>
+            <b>Usuario: ${p.u} - Monto: $${p.a}</b><br>
+            <img src="${p.img}" style="width:100px; cursor:pointer; margin:5px 0;" onclick="window.open(this.src)">
+            <div style="display:flex; gap:5px;">
+                <button style="background:var(--green); border:none; padding:8px; flex:1;" onclick="aprobar(${idx})">APROBAR</button>
+                <button style="background:var(--red); border:none; padding:8px; flex:1; color:white;" onclick="rechazar(${idx})">RECHAZAR</button>
             </div>
         </div>`; 
     }); 
