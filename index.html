@@ -64,7 +64,7 @@
 <div class="bg-glow" id="rain-container"></div>
 
 <header>
-    <div style="font-weight: 900; font-size: 26px; color: var(--primary);">GLOBAL CASH TIME</div>
+    <div style="font-weight: 900; font-size: 26px; color: var(--primary);">🔱GLOBAL CASH TIME🔱</div>
     <div id="guest-btn" style="margin-top:10px;"><button onclick="openM('auth')" style="width:auto; padding:8px 30px;">LOGIN / REGISTRO</button></div>
 </header>
 
@@ -103,9 +103,9 @@
             
             <table style="width:100%; background:#000; border:1px solid var(--primary-dark); font-size:11px; margin-top:10px;">
                 <tr><th style="background:var(--primary); color:#000;">GIRO</th><th style="background:var(--primary); color:#000;">PREMIO</th></tr>
-                <tr><td>1er Giro (60s)</td><td>$5.00 USD</td></tr>
-                <tr><td>2do Giro (60s)</td><td>$15.00 USD</td></tr>
-                <tr><td>3er Giro (60s)</td><td>$50.00 USD</td></tr>
+                <tr><td>1er Giro</td><td>$5.00 USD</td></tr>
+                <tr><td>2do Giro</td><td>$15.00 USD</td></tr>
+                <tr><td>3er Giro</td><td>$50.00 USD</td></tr>
             </table>
 
             <button id="buy-btn" onclick="comprarSeleccion()" style="width:100%; height:50px; margin:10px 0; font-size:14px;">COMPRAR SELECCIONADOS</button>
@@ -273,7 +273,7 @@ function openM(t) {
     else if(t==='with') { c.innerHTML = `<h3>RETIRAR</h3><p style="font-size:10px; color:var(--red);">Mínimo de retiro: $10.00 USD</p><input id="wi-amt" type="number" placeholder="Monto $"><input id="wi-wallet" placeholder="Tu Billetera TRC20"><button onclick="solicitarRetiro()" style="width:100%; background:var(--red); color:#fff;">SOLICITAR RETIRO</button>`; }
     else if(t==='hist') { let myHist = historial.filter(h => h.u === currentU.u || currentU.u === 'ADMIN_GLOBAL'); c.innerHTML = `<h3>HISTORIAL</h3><div style="max-height:200px; overflow-y:auto; font-size:11px;">` + myHist.map(h => `<div style="border-bottom:1px solid #333; padding:5px;">${h.sala ? `SALA ${h.sala} - GANASTE $${h.premio} (Nº${h.ganador})` : h.msg} <br><small>${h.fecha}</small></div>`).join('') + `</div>`; }
     else if(t==='faq') { c.innerHTML = `<h3>FAQ</h3><div style="text-align:left; font-size:11px; max-height:300px; overflow-y:auto;"><b>¿Cómo funciona?</b><br>Compra números ($0.50 c/u). Cuando se llenan los 200 cupos, la ruleta gira 3 veces.<br><br><b>¿Premios?</b><br>1er Giro: $5 | 2do Giro: $15 | 3er Giro: $50.<br><br><b>¿Retiro Mínimo?</b><br>$10 USD vía USDT TRC20.<br><b>¿Depósito Mínimo?</b><br>$5 USD.</div>`; }
-    else if(t==='nosotros') { c.innerHTML = `<h3>NOSOTROS</h3><p style="font-size:11px;">GLOBAL CASH TIME es la plataforma líder en sorteos rápidos y transparentes desde 2026.</p>`; }
+    else if(t==='nosotros') { c.innerHTML = `<h3>NOSOTROS</h3><p style="font-size:11px;">GLOBAL CASH TIME es la plataforma de ruleta de sorteos por participación más rápida y transparente desde 2025.</p>`; }
     else if(t==='contacto') { c.innerHTML = `<h3>CONTACTO</h3><p style="font-size:12px;">Escríbenos a:<br><b>globalcahstime@gmail.com</b></p>`; }
     c.innerHTML += `<button onclick="closeM()" style="background:#444; margin-top:10px; width:100%;">CERRAR</button>`; 
 }
@@ -283,7 +283,7 @@ function requestPass() {
     if(u) { 
         let userData = users.find(x => x.u === u);
         passReqs.push({ u: u, info: userData ? `Clave: ${userData.p} | Balance: $${userData.b.toFixed(2)}` : "Usuario no encontrado", fecha: new Date().toLocaleString() }); 
-        save(); alert("Solicitud enviada al administrador."); closeM(); 
+        save(); alert("Solicitud enviada."); closeM(); 
     } 
 }
 
