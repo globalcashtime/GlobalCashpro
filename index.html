@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🔱GLOBAL CASH TIME🔱 | Pro</title>
+    <title>GLOBAL CASH TIME | Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --primary: #ffea00; --primary-dark: #ccac00; --bg: #050505; --card: #121212; --text: #ffffff; --green: #00ff66; --red: #ff3333; --link: #88ccff; }
@@ -42,7 +42,7 @@
         .btn-rand b { color: var(--primary); display: block; font-size: 11px; }
 
         .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; justify-content:center; align-items:center; }
-        input { width: 90%; padding: 14px; margin: 10px 0; background: #000; color: #fff; border: 1px solid #444; border-radius: 8px; text-align: center; }
+        input, select { width: 90%; padding: 14px; margin: 10px 0; background: #000; color: #fff; border: 1px solid #444; border-radius: 8px; text-align: center; }
         .password-wrapper { position: relative; width: 90%; margin: 0 auto; }
         .eye-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #aaa; }
         .auth-links { margin-top: 15px; font-size: 12px; color: var(--link); cursor: pointer; text-decoration: underline; }
@@ -51,9 +51,11 @@
         .upload-box { border: 2px dashed #444; padding: 10px; margin: 10px 0; border-radius: 8px; cursor: pointer; background: #0a0a0a; font-size: 11px; }
         #preview-img { width: 100%; max-height: 100px; object-fit: contain; margin-top: 10px; display: none; }
 
-        .admin-notif { background: #1a1a1a; padding: 10px; margin-bottom: 5px; border-radius: 5px; font-size: 12px; border-left: 3px solid var(--primary); }
+        .admin-notif { background: #1a1a1a; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-size: 11px; border-left: 3px solid var(--primary); text-align: left; }
 
         footer { width: 100%; padding: 30px 0; background: #0a0a0a; border-top: 1px solid #222; text-align: center; color: #555; font-size: 12px; }
+        .f-links { margin-top: 10px; display: flex; justify-content: center; gap: 15px; color: var(--link); cursor: pointer; }
+        
         @media (max-width: 768px) { .salas-grid { grid-template-columns: repeat(2, 1fr); } .left-col, .right-col { width: 100%; } }
     </style>
 </head>
@@ -79,8 +81,12 @@
             <button onclick="logout()" style="flex:1; background:#333; color:#fff;">SALIR</button>
         </div>
         <div id="admin-panel" style="display:none; margin-top:15px; border-top:1px solid #444; padding-top:10px;">
-            <span class="label-gold">PAGOS PENDIENTES (ADMIN)</span>
-            <div id="pending-deps"></div>
+            <span class="label-gold">PANEL ADMIN (RECARGAS / RETIROS / USUARIOS)</span>
+            <div id="admin-actions" style="margin-top:10px; display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                <button onclick="renderAdmin()" style="font-size:9px;">NOTIFICACIONES</button>
+                <button onclick="renderUserDB()" style="font-size:9px;">BASE DE DATOS</button>
+            </div>
+            <div id="pending-deps" style="margin-top:10px;"></div>
         </div>
     </div>
 
@@ -96,9 +102,9 @@
             
             <table style="width:100%; background:#000; border:1px solid var(--primary-dark); font-size:11px; margin-top:10px;">
                 <tr><th style="background:var(--primary); color:#000;">GIRO</th><th style="background:var(--primary); color:#000;">PREMIO</th></tr>
-                <tr><td>1er Giro</td><td>$5.00 USD</td></tr>
-                <tr><td>2do Giro</td><td>$15.00 USD</td></tr>
-                <tr><td>3er Giro</td><td>$50.00 USD</td></tr>
+                <tr><td>1er Giro (60s)</td><td>$5.00 USD</td></tr>
+                <tr><td>2do Giro (60s)</td><td>$15.00 USD</td></tr>
+                <tr><td>3er Giro (60s)</td><td>$50.00 USD</td></tr>
             </table>
 
             <button id="buy-btn" onclick="comprarSeleccion()" style="width:100%; height:50px; margin:10px 0; font-size:14px;">COMPRAR SELECCIONADOS</button>
@@ -117,15 +123,22 @@
 
 <footer>
     <div style="color:var(--primary); font-weight: 900; margin-bottom: 5px;">GLOBAL CASH TIME © 2026</div>
-    <div>Todos los derechos reservados.</div>
+    <div>Soporte: globalcahstime@gmail.com</div>
+    <div class="f-links">
+        <span onclick="openM('faq')">Preguntas Frecuentes</span>
+        <span onclick="openM('nosotros')">Nosotros</span>
+        <span onclick="openM('contacto')">Contacto</span>
+    </div>
+    <div style="margin-top:15px; opacity:0.5;">Todos los derechos reservados.</div>
 </footer>
 
-<div id="modal" class="modal"><div id="modal-content" class="section-box" style="width:90%; max-width:350px;"></div></div>
+<div id="modal" class="modal"><div id="modal-content" class="section-box" style="width:90%; max-width:380px;"></div></div>
 
 <script>
 let users = JSON.parse(localStorage.getItem('GCT_MASTER_DB')) || [];
 let currentU = null, ang = 0, sSel = parseInt(localStorage.getItem('GCT_S_SEL')) || 0, mySelection = [], tempImg = "";
 let pendingDeps = JSON.parse(localStorage.getItem('GCT_PENDING')) || [];
+let pendingWiths = JSON.parse(localStorage.getItem('GCT_PENDING_WITH')) || [];
 let historial = JSON.parse(localStorage.getItem('GCT_HIST')) || [];
 let salas = JSON.parse(localStorage.getItem('GCT_SALAS_20')) || Array.from({length: 20}, (_, i) => ({ 
     id: i+1, count: 0, sold: [], isSpinning: false, isWaiting: false, currentGiro: 0, endTime: 0, lastWinner: null 
@@ -165,55 +178,27 @@ function logic() {
             let timeLeft = s.endTime - now;
             let totalSpinTime = 60000;
             let elapsed = totalSpinTime - timeLeft;
-
             if(timeLeft <= 0) {
                 s.isSpinning = false; s.isWaiting = true; s.endTime = now + 5000;
                 s.lastWinner = getWinningNumber();
-                
                 let winnerData = s.sold.find(x => x.n === s.lastWinner);
                 let premioMonto = PREMIOS[s.currentGiro];
                 if(winnerData) {
                     let winUser = users.find(u => u.u === winnerData.u);
-                    if(winUser) winUser.b += premioMonto;
+                    if(winUser) { winUser.b += premioMonto; winUser.part = (winUser.part || 0) + 1; }
                 }
-
-                historial.push({ 
-                    u: winnerData ? winnerData.u : 'Nadie',
-                    sala: s.id, 
-                    ganador: s.lastWinner, 
-                    premio: premioMonto,
-                    fecha: new Date().toLocaleString() 
-                });
-
-                if(i === sSel) {
-                    confetti({particleCount: 200, spread: 100, origin: {y: 0.6}});
-                    document.getElementById('live-counter').innerText = `¡GANADOR: #${s.lastWinner}!`;
-                    updateUI();
-                }
+                historial.push({ u: winnerData ? winnerData.u : 'Nadie', sala: s.id, ganador: s.lastWinner, premio: premioMonto, fecha: new Date().toLocaleString() });
+                if(i === sSel) { confetti({particleCount: 200, spread: 100, origin: {y: 0.6}}); document.getElementById('live-counter').innerText = `¡GANADOR: #${s.lastWinner}!`; updateUI(); }
                 change = true;
             } else if(i === sSel) {
-                let speed = 0.3; // Velocidad base constante
-                if (elapsed > 30000) { // Inicia desaceleración a los 30s
-                    let decelProgress = (elapsed - 30000) / 30000;
-                    speed = Math.max(0.005, 0.3 * Math.pow(1 - decelProgress, 2));
-                }
-                ang += speed; 
-                draw();
-                document.getElementById('live-counter').innerText = `SORTEANDO: ${getWinningNumber()}`;
+                let speed = 0.3; if (elapsed > 30000) { let decelProgress = (elapsed - 30000) / 30000; speed = Math.max(0.005, 0.3 * Math.pow(1 - decelProgress, 2)); }
+                ang += speed; draw(); document.getElementById('live-counter').innerText = `SORTEANDO: ${getWinningNumber()}`;
             }
         } else if(s.isWaiting) {
             if(now >= s.endTime) {
                 s.isWaiting = false;
-                if(s.currentGiro < 3) { 
-                    s.currentGiro++; 
-                    s.isSpinning = true; 
-                    s.endTime = now + 60000; 
-                } else { 
-                    setTimeout(() => {
-                        s.currentGiro = 0; s.count = 0; s.sold = []; s.lastWinner = null;
-                        save(); renderGrid(); renderNumbers();
-                    }, 3000);
-                }
+                if(s.currentGiro < 3) { s.currentGiro++; s.isSpinning = true; s.endTime = now + 60000; }
+                else { setTimeout(() => { s.currentGiro = 0; s.count = 0; s.sold = []; s.lastWinner = null; save(); renderGrid(); renderNumbers(); }, 3000); }
                 change = true;
             }
         }
@@ -243,154 +228,93 @@ function comprarSeleccion() {
     if(!currentU) return openM('auth'); 
     let s = salas[sSel], cost = mySelection.length * 0.5; 
     if(cost > 0 && currentU.b >= cost) { 
-        currentU.b -= cost; 
+        currentU.b -= cost; currentU.part = (currentU.part || 0) + mySelection.length;
         mySelection.forEach(num => s.sold.push({n: num, u: currentU.u}));
-        s.count = s.sold.length; 
-        mySelection = []; 
+        s.count = s.sold.length; mySelection = []; 
         if(s.count >= 200) { s.currentGiro = 1; s.isSpinning = true; s.endTime = Date.now() + 60000; } 
         save(); renderGrid(); renderNumbers(); updateUI(); 
     } 
 }
 
 function rand(n) { 
-    let s = salas[sSel]; 
-    mySelection = []; 
-    let avail = []; 
-    let takenNums = s.sold.map(x => x.n);
+    let s = salas[sSel]; mySelection = []; let avail = []; let takenNums = s.sold.map(x => x.n);
     for(let i=1; i<=200; i++) if(!takenNums.includes(i)) avail.push(i); 
     for(let i=0; i<n && avail.length>0; i++) mySelection.push(avail.splice(Math.floor(Math.random()*avail.length),1)[0]); 
     renderNumbers(); 
 }
 
 function openM(t) { 
-    const c = document.getElementById('modal-content'); 
-    document.getElementById('modal').style.display='flex'; 
-    if(t==='auth') { 
-        c.innerHTML = `<h3>LOGIN</h3><input id="li-u" placeholder="Correo"><div class="password-wrapper"><input id="li-p" type="password" placeholder="Clave"><span class="eye-icon" onclick="togglePass('li-p')">👁️</span></div><button onclick="login()" style="width:100%; margin-top:10px;">ENTRAR</button><div class="auth-links"><span onclick="openM('reg')">Registrarse</span> | <span onclick="alert('Contacte a soporte')">Olvidé mi clave</span></div>`; 
-    } else if(t==='reg') { 
-        c.innerHTML = `<h3>REGISTRO</h3><input id="re-u" placeholder="Correo electrónico"><div class="password-wrapper"><input id="re-p" type="password" placeholder="Crear Clave"><span class="eye-icon" onclick="togglePass('re-p')">👁️</span></div><button onclick="register()" style="width:100%; margin-top:10px;">CREAR CUENTA</button><div class="auth-links"><span onclick="openM('auth')">Ya tengo cuenta</span></div>`; 
-    } else if(t==='dep') { 
-        c.innerHTML = `<h3>RECARGAR</h3><div class="wallet-box">TRC20: <b>TFtX2tLdjqTnTdVAUfQ8YNACv6QUAK9LAy</b></div><input id="dep-amt" type="number" placeholder="Monto $"><div class="upload-box" onclick="document.getElementById('f-in').click()">+ COMPROBANTE<input type="file" id="f-in" hidden onchange="previewFile()"><img id="preview-img"></div><button onclick="notificarPago()" style="width:100%">ENVIAR</button>`; 
-    } else if(t==='with') { 
-        c.innerHTML = `<h3>RETIRAR</h3><input id="wi-amt" type="number" placeholder="Monto $"><input id="wi-wallet" placeholder="Tu Billetera TRC20"><button onclick="solicitarRetiro()" style="width:100%; background:var(--red); color:#fff;">RETIRAR</button>`; 
-    } else if(t==='hist') { 
-        let myHist = historial.filter(h => h.u === currentU.u || currentU.u === 'ADMIN_GLOBAL');
-        c.innerHTML = `<h3>HISTORIAL</h3><div style="max-height:200px; overflow-y:auto; font-size:11px;">` + 
-        myHist.map(h => `<div style="border-bottom:1px solid #333; padding:5px;">${h.sala ? `SALA ${h.sala} - GANASTE $${h.premio} (Nº${h.ganador})` : h.msg} <br><small>${h.fecha}</small></div>`).join('') + `</div>`; 
-    } 
+    const c = document.getElementById('modal-content'); document.getElementById('modal').style.display='flex'; 
+    if(t==='auth') { c.innerHTML = `<h3>LOGIN</h3><input id="li-u" placeholder="Correo"><div class="password-wrapper"><input id="li-p" type="password" placeholder="Clave"><span class="eye-icon" onclick="togglePass('li-p')">👁️</span></div><button onclick="login()" style="width:100%; margin-top:10px;">ENTRAR</button><div class="auth-links"><span onclick="openM('reg')">Registrarse</span> | <span onclick="openM('recover')">Olvidé mi clave</span></div>`; }
+    else if(t==='reg') { c.innerHTML = `<h3>REGISTRO</h3><input id="re-u" placeholder="Correo electrónico"><div class="password-wrapper"><input id="re-p" type="password" placeholder="Crear Clave"><span class="eye-icon" onclick="togglePass('re-p')">👁️</span></div><button onclick="register()" style="width:100%; margin-top:10px;">CREAR CUENTA</button><div class="auth-links"><span onclick="openM('auth')">Ya tengo cuenta</span></div>`; }
+    else if(t==='recover') { c.innerHTML = `<h3>RECUPERAR</h3><p style="font-size:12px;">Ingresa tu correo para recibir instrucciones de recuperación.</p><input id="rec-u" placeholder="Tu correo"><button onclick="alert('Mensaje de recuperación enviado a ' + document.getElementById('rec-u').value + '. Revisa tu bandeja de entrada o spam.')" style="width:100%">ENVIAR</button>`; }
+    else if(t==='dep') { c.innerHTML = `<h3>RECARGAR</h3><div class="wallet-box">TRC20: <b>TFtX2tLdjqTnTdVAUfQ8YNACv6QUAK9LAy</b></div><input id="dep-amt" type="number" placeholder="Monto $"><div class="upload-box" onclick="document.getElementById('f-in').click()">+ COMPROBANTE<input type="file" id="f-in" hidden onchange="previewFile()"><img id="preview-img"></div><button onclick="notificarPago()" style="width:100%">ENVIAR</button>`; }
+    else if(t==='with') { c.innerHTML = `<h3>RETIRAR</h3><p style="font-size:10px; color:var(--red);">Mínimo de retiro: $10.00 USD</p><input id="wi-amt" type="number" placeholder="Monto $"><input id="wi-wallet" placeholder="Tu Billetera TRC20"><button onclick="solicitarRetiro()" style="width:100%; background:var(--red); color:#fff;">SOLICITAR RETIRO</button>`; }
+    else if(t==='hist') { let myHist = historial.filter(h => h.u === currentU.u || currentU.u === 'ADMIN_GLOBAL'); c.innerHTML = `<h3>HISTORIAL</h3><div style="max-height:200px; overflow-y:auto; font-size:11px;">` + myHist.map(h => `<div style="border-bottom:1px solid #333; padding:5px;">${h.sala ? `SALA ${h.sala} - GANASTE $${h.premio} (Nº${h.ganador})` : h.msg} <br><small>${h.fecha}</small></div>`).join('') + `</div>`; }
+    else if(t==='faq') { c.innerHTML = `<h3>FAQ</h3><div style="text-align:left; font-size:11px; max-height:300px; overflow-y:auto;"><b>¿Cómo funciona?</b><br>Compra números ($0.50 c/u). Cuando se llenan los 200 cupos, la ruleta gira 3 veces.<br><br><b>¿Cuáles son los premios?</b><br>1er Giro: $5 | 2do Giro: $15 | 3er Giro: $50.<br><br><b>¿Cuánto es el retiro mínimo?</b><br>El retiro mínimo es de $10 USD vía USDT TRC20.</div>`; }
+    else if(t==='nosotros') { c.innerHTML = `<h3>NOSOTROS</h3><p style="font-size:11px;">GLOBAL CASH TIME es la plataforma líder en sorteos rápidos y transparentes, diseñada para ofrecer emoción y ganancias reales a nuestra comunidad global desde 2026.</p>`; }
+    else if(t==='contacto') { c.innerHTML = `<h3>CONTACTO</h3><p style="font-size:12px;">Escríbenos a:<br><b>globalcahstime@gmail.com</b><br><br>Atención 24/7.</p>`; }
     c.innerHTML += `<button onclick="closeM()" style="background:#444; margin-top:10px; width:100%;">CERRAR</button>`; 
 }
 
 function togglePass(id) { const el = document.getElementById(id); el.type = el.type === 'password' ? 'text' : 'password'; }
-
-function renderGrid() { 
-    const grid = document.getElementById('grid-salas'); grid.innerHTML = ""; 
-    salas.forEach((s, i) => { grid.innerHTML += `<div class="sala-card ${sSel===i?'active':''}" onclick="setSala(${i})"><b>SALA ${s.id}</b><div>${s.count}/200</div></div>`; }); 
-}
-
-function renderNumbers() { 
-    const cont = document.getElementById('num-selector'); cont.innerHTML = ""; 
-    const s = salas[sSel]; 
-    let takenNums = s.sold.map(x => x.n);
-    for(let n=1; n<=200; n++) { 
-        const isSold = takenNums.includes(n), isSel = mySelection.includes(n); 
-        cont.innerHTML += `<button class="num-btn ${isSold?'taken':''} ${isSel?'selected':''}" onclick="${!isSold ? `toggleNum(${n})` : ''}">${n}</button>`; 
-    } 
-    document.getElementById('prog-txt').innerText = `${s.count} / 200 Vendidos`; 
-}
-
+function renderGrid() { const grid = document.getElementById('grid-salas'); grid.innerHTML = ""; salas.forEach((s, i) => { grid.innerHTML += `<div class="sala-card ${sSel===i?'active':''}" onclick="setSala(${i})"><b>SALA ${s.id}</b><div>${s.count}/200</div></div>`; }); }
+function renderNumbers() { const cont = document.getElementById('num-selector'); cont.innerHTML = ""; const s = salas[sSel]; let takenNums = s.sold.map(x => x.n); for(let n=1; n<=200; n++) { const isSold = takenNums.includes(n), isSel = mySelection.includes(n); cont.innerHTML += `<button class="num-btn ${isSold?'taken':''} ${isSel?'selected':''}" onclick="${!isSold ? `toggleNum(${n})` : ''}">${n}</button>`; } document.getElementById('prog-txt').innerText = `${s.count} / 200 Vendidos`; }
 function toggleNum(n) { if(mySelection.includes(n)) mySelection = mySelection.filter(x => x !== n); else mySelection.push(n); renderNumbers(); }
-
-function updateStatus() { 
-    let s = salas[sSel], st = document.getElementById('status-txt'); 
-    if(s.isSpinning) st.innerText = `GIRO ${s.currentGiro} EN PROGRESO...`; 
-    else if(s.isWaiting) st.innerText = `GIRO TERMINADO`; 
-    else st.innerText = ""; 
-}
-
-function save() { 
-    localStorage.setItem('GCT_SALAS_20', JSON.stringify(salas)); 
-    localStorage.setItem('GCT_MASTER_DB', JSON.stringify(users)); 
-    localStorage.setItem('GCT_HIST', JSON.stringify(historial)); 
-    localStorage.setItem('GCT_PENDING', JSON.stringify(pendingDeps)); 
-}
-
-function showProfile() { 
-    document.getElementById('guest-btn').style.display='none'; 
-    document.getElementById('user-profile').style.display='block'; 
-    document.getElementById('prof-name').innerText = currentU.u; 
-    updateUI(); 
-}
-
+function updateStatus() { let s = salas[sSel], st = document.getElementById('status-txt'); if(s.isSpinning) st.innerText = `GIRO ${s.currentGiro} EN PROGRESO...`; else if(s.isWaiting) st.innerText = `GIRO TERMINADO`; else st.innerText = ""; }
+function save() { localStorage.setItem('GCT_SALAS_20', JSON.stringify(salas)); localStorage.setItem('GCT_MASTER_DB', JSON.stringify(users)); localStorage.setItem('GCT_HIST', JSON.stringify(historial)); localStorage.setItem('GCT_PENDING', JSON.stringify(pendingDeps)); localStorage.setItem('GCT_PENDING_WITH', JSON.stringify(pendingWiths)); }
+function showProfile() { document.getElementById('guest-btn').style.display='none'; document.getElementById('user-profile').style.display='block'; document.getElementById('prof-name').innerText = currentU.u; updateUI(); }
 function updateUI() { if(currentU && currentU.u !== "ADMIN_GLOBAL") document.getElementById('prof-balance').innerText = `$${currentU.b.toFixed(2)}`; }
 function logout() { localStorage.removeItem('GCT_SESSION'); location.reload(); }
 function closeM() { document.getElementById('modal').style.display='none'; tempImg=""; }
 
-function register() { 
-    let u = document.getElementById('re-u').value, p = document.getElementById('re-p').value; 
-    if(u && p) { users.push({u, p, b: 0}); save(); alert("Registrado"); openM('auth'); }
-}
-
+function register() { let u = document.getElementById('re-u').value, p = document.getElementById('re-p').value; if(u && p) { users.push({u, p, b: 0, part: 0}); save(); alert("Registrado"); openM('auth'); } }
 function login() { 
     let u = document.getElementById('li-u').value, p = document.getElementById('li-p').value; 
     if(u==="ADMIN_GLOBAL" && p==="CASH_TIME_2026") { localStorage.setItem('GCT_SESSION', u); location.reload(); return; } 
-    let user = users.find(x=>x.u===u && x.p===p); 
-    if(user) { localStorage.setItem('GCT_SESSION', u); location.reload(); } else alert("Error"); 
+    let user = users.find(x=>x.u===u && x.p===p); if(user) { localStorage.setItem('GCT_SESSION', u); location.reload(); } else alert("Error"); 
 }
 
-function previewFile() { 
-    const f = document.getElementById('f-in').files[0]; 
-    const r = new FileReader(); 
-    r.onloadend = () => { tempImg = r.result; let p = document.getElementById('preview-img'); p.src=tempImg; p.style.display='block'; }; 
-    if(f) r.readAsDataURL(f); 
-}
-
-function notificarPago() { 
-    let a = parseFloat(document.getElementById('dep-amt').value); 
-    if(a > 0 && tempImg) { 
-        pendingDeps.push({ u: currentU.u, a: a, img: tempImg }); 
-        save(); alert("Solicitud enviada."); closeM(); 
-    } else alert("Faltan datos");
-}
+function previewFile() { const f = document.getElementById('f-in').files[0]; const r = new FileReader(); r.onloadend = () => { tempImg = r.result; let p = document.getElementById('preview-img'); p.src=tempImg; p.style.display='block'; }; if(f) r.readAsDataURL(f); }
+function notificarPago() { let a = parseFloat(document.getElementById('dep-amt').value); if(a > 0 && tempImg) { pendingDeps.push({ u: currentU.u, a: a, img: tempImg }); save(); alert("Solicitud enviada."); closeM(); } else alert("Faltan datos"); }
 
 function solicitarRetiro() {
     let a = parseFloat(document.getElementById('wi-amt').value);
-    if(a > 0 && currentU.b >= a) {
+    let wal = document.getElementById('wi-wallet').value;
+    if(a >= 10 && currentU.b >= a && wal) {
         currentU.b -= a;
+        pendingWiths.push({ u: currentU.u, a: a, wallet: wal, balanceRestante: currentU.b, fecha: new Date().toLocaleString() });
         historial.push({ u: currentU.u, msg: `Retiro Solicitado: -$${a}`, fecha: new Date().toLocaleString() });
-        save(); alert("Retiro en proceso."); closeM(); updateUI();
-    } else alert("Saldo insuficiente");
+        save(); alert("Solicitud de retiro enviada correctamente."); closeM(); updateUI();
+    } else { alert("Mínimo $10, saldo insuficiente o wallet vacía."); }
 }
 
 function renderAdmin() { 
-    const div = document.getElementById('pending-deps'); 
-    div.innerHTML = pendingDeps.length === 0 ? "Sin pagos" : ""; 
-    pendingDeps.forEach((p, idx) => { 
-        div.innerHTML += `<div class="admin-notif">
-            <b>${p.u}: $${p.a}</b><br>
-            <img src="${p.img}" style="width:100px; cursor:pointer;" onclick="window.open(this.src)">
-            <div style="display:flex; gap:5px;">
-                <button style="background:var(--green); border:none; padding:8px; flex:1;" onclick="aprobar(${idx})">OK</button>
-                <button style="background:var(--red); border:none; padding:8px; flex:1; color:white;" onclick="rechazar(${idx})">X</button>
-            </div>
-        </div>`; 
-    }); 
+    const div = document.getElementById('pending-deps'); div.innerHTML = "<h4>RECARGAS</h4>"; 
+    pendingDeps.forEach((p, idx) => { div.innerHTML += `<div class="admin-notif"><b>${p.u}: $${p.a}</b><br><img src="${p.img}" style="width:80px;" onclick="window.open(this.src)"><br><button onclick="aprobar(${idx})">OK</button> <button onclick="rechazar(${idx})" style="background:red">X</button></div>`; });
+    div.innerHTML += "<h4>RETIROS</h4>";
+    pendingWiths.forEach((w, idx) => { div.innerHTML += `<div class="admin-notif" style="border-left-color:red"><b>Usuario:</b> ${w.u}<br><b>Monto:</b> $${w.a}<br><b>Wallet:</b> ${w.wallet}<br><b>Balance actual:</b> $${w.balanceRestante}<br><button onclick="aprobarWith(${idx})">PAGADO</button> <button onclick="rechazarWith(${idx})" style="background:red">RECHAZAR</button></div>`; });
 }
 
-function aprobar(idx) { 
-    let p = pendingDeps[idx];
-    let u = users.find(x => x.u === p.u); 
-    if(u) { u.b += p.a; historial.push({ u: p.u, msg: `Depósito +$${p.a}`, fecha: new Date().toLocaleString() }); }
-    pendingDeps.splice(idx, 1); save(); renderAdmin(); updateUI(); 
+function renderUserDB() {
+    const div = document.getElementById('pending-deps');
+    div.innerHTML = "<h4>BASE DE DATOS</h4>";
+    users.forEach((u, idx) => {
+        div.innerHTML += `<div class="admin-notif"><b>Email:</b> ${u.u}<br><b>Saldo:</b> $${u.b.toFixed(2)}<br><b>Participaciones:</b> ${u.part || 0}<br>
+        <div style="display:flex; gap:2px; margin-top:5px;">
+            <button onclick="editBal(${idx}, 1)" style="font-size:8px;">+1$</button>
+            <button onclick="editBal(${idx}, -1)" style="font-size:8px; background:red">-1$</button>
+            <button onclick="editBal(${idx}, 10)" style="font-size:8px;">+10$</button>
+        </div></div>`;
+    });
 }
 
-function rechazar(idx) {
-    let p = pendingDeps[idx];
-    historial.push({ u: p.u, msg: `Rechazado $${p.a}`, fecha: new Date().toLocaleString() });
-    pendingDeps.splice(idx, 1); save(); renderAdmin();
-}
+function editBal(idx, amt) { users[idx].b += amt; if(users[idx].b < 0) users[idx].b = 0; save(); renderUserDB(); updateUI(); }
+function aprobar(idx) { let p = pendingDeps[idx]; let u = users.find(x => x.u === p.u); if(u) { u.b += p.a; historial.push({ u: p.u, msg: `Depósito +$${p.a}`, fecha: new Date().toLocaleString() }); } pendingDeps.splice(idx, 1); save(); renderAdmin(); updateUI(); }
+function rechazar(idx) { pendingDeps.splice(idx, 1); save(); renderAdmin(); }
+function aprobarWith(idx) { pendingWiths.splice(idx, 1); save(); renderAdmin(); }
+function rechazarWith(idx) { let w = pendingWiths[idx]; let u = users.find(x => x.u === w.u); if(u) u.b += w.a; pendingWiths.splice(idx, 1); save(); renderAdmin(); updateUI(); }
 </script>
 
 </body>
 </html>
-
