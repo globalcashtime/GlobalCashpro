@@ -178,7 +178,7 @@ function logic() {
     salas.forEach((s, i) => {
         if(s.isSpinning) {
             let timeLeft = s.endTime - now;
-            let totalSpinTime = 60000;
+            let totalSpinTime = 15000;
             let elapsed = totalSpinTime - timeLeft;
             if(timeLeft <= 0) {
                 s.isSpinning = false; s.isWaiting = true; s.endTime = now + 5000;
@@ -190,16 +190,21 @@ function logic() {
                     if(winUser) { winUser.b += premioMonto; winUser.part = (winUser.part || 0) + 1; }
                 }
                 historial.push({ u: winnerData ? winnerData.u : 'Nadie', sala: s.id, ganador: s.lastWinner, premio: premioMonto, fecha: new Date().toLocaleString() });
-                if(i === sSel) { confetti({particleCount: 200, spread: 100, origin: {y: 0.6}}); document.getElementById('live-counter').innerText = `¡GANADOR: #${s.lastWinner}!`; updateUI(); }
+                if(i === sSel) { confetti({particleCount: 150, spread: 70, origin: {y: 0.6}, ticks: 300}); document.getElementById('live-counter').innerText = `¡GANADOR: #${s.lastWinner}!`; updateUI(); }
                 change = true;
             } else if(i === sSel) {
-                let speed = 0.3; if (elapsed > 30000) { let decelProgress = (elapsed - 30000) / 30000; speed = Math.max(0.005, 0.3 * Math.pow(1 - decelProgress, 2)); }
-                ang += speed; draw(); document.getElementById('live-counter').innerText = `SORTEANDO: ${getWinningNumber()}`;
+                let speed = 0.4; 
+                if (elapsed > 7000) { 
+                    let decelProgress = (elapsed - 7000) / 8000; 
+                    speed = Math.max(0.002, 0.4 * Math.pow(1 - decelProgress, 3)); 
+                }
+                ang += speed; draw(); 
+                document.getElementById('live-counter').innerText = `SORTEANDO: ${getWinningNumber()}`;
             }
         } else if(s.isWaiting) {
             if(now >= s.endTime) {
                 s.isWaiting = false;
-                if(s.currentGiro < 3) { s.currentGiro++; s.isSpinning = true; s.endTime = now + 60000; }
+                if(s.currentGiro < 3) { s.currentGiro++; s.isSpinning = true; s.endTime = now + 15000; }
                 else { setTimeout(() => { s.currentGiro = 0; s.count = 0; s.sold = []; s.lastWinner = null; save(); renderGrid(); renderNumbers(); }, 3000); }
                 change = true;
             }
@@ -224,7 +229,15 @@ function draw() {
     }
 }
 
-function setSala(i) { sSel = i; localStorage.setItem('GCT_S_SEL', i); mySelection = []; document.getElementById('sala-txt').innerText = `SALA #${salas[i].id}`; renderGrid(); renderNumbers(); }
+function setSala(i) { 
+    sSel = i; 
+    localStorage.setItem('GCT_S_SEL', i); 
+    mySelection = []; 
+    document.getElementById('sala-txt').innerText = `SALA #${salas[i].id}`; 
+    document.getElementById('live-counter').innerText = ""; 
+    renderGrid(); 
+    renderNumbers(); 
+}
 
 function comprarSeleccion() { 
     if(!currentU) return openM('auth'); 
@@ -233,7 +246,7 @@ function comprarSeleccion() {
         currentU.b -= cost; currentU.part = (currentU.part || 0) + mySelection.length;
         mySelection.forEach(num => s.sold.push({n: num, u: currentU.u}));
         s.count = s.sold.length; mySelection = []; 
-        if(s.count >= 200) { s.currentGiro = 1; s.isSpinning = true; s.endTime = Date.now() + 60000; } 
+        if(s.count >= 200) { s.currentGiro = 1; s.isSpinning = true; s.endTime = Date.now() + 15000; } 
         save(); renderGrid(); renderNumbers(); updateUI(); 
     } 
 }
@@ -272,7 +285,17 @@ function togglePass(id) { const el = document.getElementById(id); el.type = el.t
 function renderGrid() { const grid = document.getElementById('grid-salas'); grid.innerHTML = ""; salas.forEach((s, i) => { grid.innerHTML += `<div class="sala-card ${sSel===i?'active':''}" onclick="setSala(${i})"><b>SALA ${s.id}</b><div>${s.count}/200</div></div>`; }); }
 function renderNumbers() { const cont = document.getElementById('num-selector'); cont.innerHTML = ""; const s = salas[sSel]; let takenNums = s.sold.map(x => x.n); for(let n=1; n<=200; n++) { const isSold = takenNums.includes(n), isSel = mySelection.includes(n); cont.innerHTML += `<button class="num-btn ${isSold?'taken':''} ${isSel?'selected':''}" onclick="${!isSold ? `toggleNum(${n})` : ''}">${n}</button>`; } document.getElementById('prog-txt').innerText = `${s.count} / 200 Vendidos`; }
 function toggleNum(n) { if(mySelection.includes(n)) mySelection = mySelection.filter(x => x !== n); else mySelection.push(n); renderNumbers(); }
-function updateStatus() { let s = salas[sSel], st = document.getElementById('status-txt'); if(s.isSpinning) st.innerText = `GIRO ${s.currentGiro} EN PROGRESO...`; else if(s.isWaiting) st.innerText = `GIRO TERMINADO`; else st.innerText = ""; }
+
+function updateStatus() { 
+    let s = salas[sSel], st = document.getElementById('status-txt'); 
+    if(s.isSpinning) st.innerText = `GIRO ${s.currentGiro} EN PROGRESO...`; 
+    else if(s.isWaiting) {
+        if(s.lastWinner) st.innerText = `GIRO TERMINADO`;
+        else st.innerText = "";
+    }
+    else st.innerText = ""; 
+}
+
 function save() { localStorage.setItem('GCT_SALAS_20', JSON.stringify(salas)); localStorage.setItem('GCT_MASTER_DB', JSON.stringify(users)); localStorage.setItem('GCT_HIST', JSON.stringify(historial)); localStorage.setItem('GCT_PENDING', JSON.stringify(pendingDeps)); localStorage.setItem('GCT_PENDING_WITH', JSON.stringify(pendingWiths)); localStorage.setItem('GCT_PASS_REQ', JSON.stringify(passReqs)); }
 function showProfile() { document.getElementById('guest-btn').style.display='none'; document.getElementById('user-profile').style.display='block'; document.getElementById('prof-name').innerText = currentU.u; updateUI(); }
 function updateUI() { if(currentU && currentU.u !== "ADMIN_GLOBAL") document.getElementById('prof-balance').innerText = `$${currentU.b.toFixed(2)}`; }
@@ -336,7 +359,7 @@ function renderPassReqs() {
 }
 
 function editBal(idx, amt) { users[idx].b += amt; if(users[idx].b < 0) users[idx].b = 0; save(); renderUserDB(); updateUI(); }
-function aprobar(idx) { let p = pendingDeps[idx]; let u = users.find(x => x.u === p.u); if(u) { u.b += p.a; historial.push({ u: p.u, msg: `Retiro Aprobado: +$${p.a}`, fecha: new Date().toLocaleString() }); } pendingDeps.splice(idx, 1); save(); renderAdmin(); updateUI(); }
+function aprobar(idx) { let p = pendingDeps[idx]; let u = users.find(x => x.u === p.u); if(u) { u.b += p.a; historial.push({ u: p.u, msg: `Depósito Aprobado: +$${p.a}`, fecha: new Date().toLocaleString() }); } pendingDeps.splice(idx, 1); save(); renderAdmin(); updateUI(); }
 function rechazar(idx) { let p = pendingDeps[idx]; historial.push({ u: p.u, msg: `Depósito Rechazado: $${p.a}`, fecha: new Date().toLocaleString() }); pendingDeps.splice(idx, 1); save(); renderAdmin(); }
 function aprobarWith(idx) { let w = pendingWiths[idx]; historial.push({ u: w.u, msg: `Retiro Aprobado: $${w.a}`, fecha: new Date().toLocaleString() }); pendingWiths.splice(idx, 1); save(); renderAdmin(); }
 function rechazarWith(idx) { let w = pendingWiths[idx]; let u = users.find(x => x.u === w.u); if(u) u.b += w.a; historial.push({ u: w.u, msg: `Retiro Rechazado (Saldo devuelto): $${w.a}`, fecha: new Date().toLocaleString() }); pendingWiths.splice(idx, 1); save(); renderAdmin(); updateUI(); }
@@ -344,4 +367,3 @@ function rechazarWith(idx) { let w = pendingWiths[idx]; let u = users.find(x => 
 
 </body>
 </html>
-
