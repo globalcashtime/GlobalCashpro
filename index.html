@@ -10,15 +10,10 @@
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; position: relative; min-height: 100vh; }
         body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, #1a1500 0%, #050505 100%); z-index: -2; }
         
-        .bg-glow { position: fixed; width: 100vw; height: 100vh; z-index: -1; overflow: hidden; top: 0; }
-        .particle { position: absolute; width: 4px; height: 4px; background: var(--primary); border-radius: 50%; opacity: 0; animation: particleRain 4s infinite linear; filter: blur(1px) drop-shadow(0 0 5px var(--primary)); }
-        
-        @keyframes particleRain {
-            0% { transform: translateY(-10vh); opacity: 0; }
-            20% { opacity: 0.8; }
-            80% { opacity: 0.8; }
-            100% { transform: translateY(110vh); opacity: 0; }
-        }
+        /* LLUVIA DE ANIMACION */
+        .bg-glow { position: fixed; width: 100vw; height: 100vh; z-index: -1; top: 0; left: 0; pointer-events: none; }
+        .particle { position: absolute; width: 2px; height: 15px; background: var(--primary); opacity: 0.3; animation: rain linear infinite; }
+        @keyframes rain { 0% { transform: translateY(-100px); } 100% { transform: translateY(110vh); } }
 
         header { width: 100%; padding: 20px 0; background: rgba(18, 18, 18, 0.9); border-bottom: 2px solid var(--primary); text-align: center; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
         .main-container { width: 95%; max-width: 1200px; padding: 10px; box-sizing: border-box; flex-grow: 1; }
@@ -57,15 +52,15 @@
         .upload-box { border: 2px dashed #444; padding: 10px; margin: 10px 0; border-radius: 8px; cursor: pointer; background: #0a0a0a; font-size: 11px; }
         #preview-img { width: 100%; max-height: 100px; object-fit: contain; margin-top: 10px; display: none; }
 
+        .admin-notif { background: #1a1a1a; padding: 10px; margin-bottom: 5px; border-radius: 5px; font-size: 12px; border-left: 3px solid var(--primary); }
+
         footer { width: 100%; padding: 30px 0; background: #0a0a0a; border-top: 1px solid #222; text-align: center; color: #555; font-size: 12px; }
         @media (max-width: 768px) { .salas-grid { grid-template-columns: repeat(2, 1fr); } .left-col, .right-col { width: 100%; } }
     </style>
 </head>
 <body>
 
-<div class="bg-glow">
-    <div class="particle" style="left:5%"></div><div class="particle" style="left:50%"></div><div class="particle" style="left:90%"></div>
-</div>
+<div class="bg-glow" id="rain-container"></div>
 
 <header>
     <div style="font-weight: 900; font-size: 26px; color: var(--primary);">GLOBAL CASH TIME</div>
@@ -102,9 +97,9 @@
             
             <table style="width:100%; background:#000; border:1px solid var(--primary-dark); font-size:11px; margin-top:10px;">
                 <tr><th style="background:var(--primary); color:#000;">GIRO</th><th style="background:var(--primary); color:#000;">PREMIO</th></tr>
-                <tr><td>1er Giro (60s)</td><td>$5.00 USD</td></tr>
-                <tr><td>2do Giro (60s)</td><td>$15.00 USD</td></tr>
-                <tr><td>3er Giro (60s)</td><td>$50.00 USD</td></tr>
+                <tr><td>1er Giro (15s)</td><td>$5.00 USD</td></tr>
+                <tr><td>2do Giro (15s)</td><td>$15.00 USD</td></tr>
+                <tr><td>3er Giro (15s)</td><td>$50.00 USD</td></tr>
             </table>
 
             <button id="buy-btn" onclick="comprarSeleccion()" style="width:100%; height:50px; margin:10px 0; font-size:14px;">COMPRAR SELECCIONADOS</button>
@@ -138,8 +133,10 @@ let salas = JSON.parse(localStorage.getItem('GCT_SALAS_20')) || Array.from({leng
 }));
 
 const wheelNumbers = Array.from({length: 200}, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+const PREMIOS = { 1: 5, 2: 15, 3: 50 };
 
 window.onload = () => {
+    createRain();
     const saved = localStorage.getItem('GCT_SESSION');
     if(saved) {
         if(saved === "ADMIN_GLOBAL") { currentU = {u:"ADMIN_GLOBAL", b:0}; document.getElementById('admin-panel').style.display='block'; renderAdmin(); }
@@ -148,6 +145,18 @@ window.onload = () => {
     }
     setSala(sSel); renderGrid(); renderNumbers(); draw(); setInterval(logic, 30);
 };
+
+function createRain() {
+    const container = document.getElementById('rain-container');
+    for(let i=0; i<50; i++) {
+        let p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + 'vw';
+        p.style.animationDuration = (Math.random() * 1 + 0.5) + 's';
+        p.style.animationDelay = Math.random() * 2 + 's';
+        container.appendChild(p);
+    }
+}
 
 function logic() {
     const now = Date.now();
@@ -158,23 +167,48 @@ function logic() {
             if(timeLeft <= 0) {
                 s.isSpinning = false; s.isWaiting = true; s.endTime = now + 5000;
                 s.lastWinner = getWinningNumber();
-                historial.push({ sala: s.id, ganador: s.lastWinner, fecha: new Date().toLocaleString() });
+                
+                // PAGAR AUTOMÁTICAMENTE
+                let winnerData = s.sold.find(x => x.n === s.lastWinner);
+                let premioMonto = PREMIOS[s.currentGiro];
+                if(winnerData) {
+                    let winUser = users.find(u => u.u === winnerData.u);
+                    if(winUser) winUser.b += premioMonto;
+                }
+
+                historial.push({ 
+                    u: winnerData ? winnerData.u : 'Nadie',
+                    sala: s.id, 
+                    ganador: s.lastWinner, 
+                    premio: premioMonto,
+                    fecha: new Date().toLocaleString() 
+                });
+
                 if(i === sSel) {
-                    confetti({particleCount: 200, spread: 100, origin: {y: 0.6}, shapes: ['square']});
+                    confetti({particleCount: 200, spread: 100, origin: {y: 0.6}});
                     document.getElementById('live-counter').innerText = "";
+                    updateUI();
                 }
                 change = true;
             } else if(i === sSel) {
-                let progress = timeLeft / 60000;
-                ang += Math.max(0.001, Math.pow(progress, 3) * 0.4); 
+                ang += 0.25; 
                 draw();
-                document.getElementById('live-counter').innerText = `SORTEANDO: ${getWinningNumber()}`;
+                document.getElementById('live-counter').innerText = `SORTEANDO...`;
             }
         } else if(s.isWaiting) {
             if(now >= s.endTime) {
                 s.isWaiting = false;
-                if(s.currentGiro < 3) { s.currentGiro++; s.isSpinning = true; s.endTime = now + 60000; } 
-                else { s.currentGiro = 0; s.count = 0; s.sold = []; }
+                if(s.currentGiro < 3) { 
+                    s.currentGiro++; 
+                    s.isSpinning = true; 
+                    s.endTime = now + 15000; 
+                } else { 
+                    // RESET AUTOMÁTICO DESPUÉS DE 3 SEGUNDOS
+                    setTimeout(() => {
+                        s.currentGiro = 0; s.count = 0; s.sold = []; s.lastWinner = null;
+                        save(); renderGrid(); renderNumbers();
+                    }, 3000);
+                }
                 change = true;
             }
         }
@@ -199,25 +233,153 @@ function draw() {
 }
 
 function setSala(i) { sSel = i; localStorage.setItem('GCT_S_SEL', i); mySelection = []; document.getElementById('sala-txt').innerText = `SALA #${salas[i].id}`; renderGrid(); renderNumbers(); }
-function comprarSeleccion() { if(!currentU) return openM('auth'); let s = salas[sSel], cost = mySelection.length * 0.5; if(cost > 0 && currentU.b >= cost) { currentU.b -= cost; s.sold.push(...mySelection); s.count = s.sold.length; mySelection = []; if(s.count >= 200) { s.currentGiro = 1; s.isSpinning = true; s.endTime = Date.now() + 60000; } save(); renderGrid(); renderNumbers(); updateUI(); } }
-function rand(n) { let s = salas[sSel]; mySelection = []; let avail = []; for(let i=1; i<=200; i++) if(!s.sold.includes(i)) avail.push(i); for(let i=0; i<n && avail.length>0; i++) mySelection.push(avail.splice(Math.floor(Math.random()*avail.length),1)[0]); renderNumbers(); }
-function openM(t) { const c = document.getElementById('modal-content'); document.getElementById('modal').style.display='flex'; if(t==='auth') { c.innerHTML = `<h3>LOGIN</h3><input id="li-u" placeholder="Correo"><div class="password-wrapper"><input id="li-p" type="password" placeholder="Clave"><span class="eye-icon" onclick="togglePass('li-p')">👁️</span></div><button onclick="login()" style="width:100%; margin-top:10px;">ENTRAR</button><div class="auth-links"><span onclick="openM('reg')">Registrarse</span> | <span onclick="alert('Contacte a soporte')">Olvidé mi clave</span></div>`; } else if(t==='reg') { c.innerHTML = `<h3>REGISTRO</h3><input id="re-u" placeholder="Correo electrónico"><div class="password-wrapper"><input id="re-p" type="password" placeholder="Crear Clave"><span class="eye-icon" onclick="togglePass('re-p')">👁️</span></div><button onclick="register()" style="width:100%; margin-top:10px;">CREAR CUENTA</button><div class="auth-links"><span onclick="openM('auth')">Ya tengo cuenta</span></div>`; } else if(t==='dep') { c.innerHTML = `<h3>RECARGAR</h3><div class="wallet-box">Wallet TRC20:<br><b>TFtX2tLdjqTnTdVAUfQ8YNACv6QUAK9LAy</b></div><input id="dep-amt" type="number" placeholder="Monto $"><div class="upload-box" onclick="document.getElementById('f-in').click()">+ SUBIR COMPROBANTE<input type="file" id="f-in" hidden onchange="previewFile()"><img id="preview-img"></div><button onclick="notificarPago()" style="width:100%">ENVIAR</button>`; } else if(t==='with') { c.innerHTML = `<h3>RETIRAR</h3><input id="wi-amt" type="number" placeholder="Monto $"><input placeholder="Tu Billetera TRC20"><button onclick="alert('Solicitado')" style="width:100%; background:var(--red); color:#fff;">RETIRAR</button>`; } else if(t==='hist') { c.innerHTML = `<h3>HISTORIAL</h3><div style="max-height:200px; overflow-y:auto; font-size:11px;">` + historial.map(h => `<div style="border-bottom:1px solid #333; padding:5px;">SALA ${h.sala} - #${h.ganador} (${h.fecha})</div>`).join('') + `</div>`; } c.innerHTML += `<button onclick="closeM()" style="background:#444; margin-top:10px; width:100%;">CERRAR</button>`; }
+
+function comprarSeleccion() { 
+    if(!currentU) return openM('auth'); 
+    let s = salas[sSel], cost = mySelection.length * 0.5; 
+    if(cost > 0 && currentU.b >= cost) { 
+        currentU.b -= cost; 
+        mySelection.forEach(num => s.sold.push({n: num, u: currentU.u}));
+        s.count = s.sold.length; 
+        mySelection = []; 
+        if(s.count >= 200) { s.currentGiro = 1; s.isSpinning = true; s.endTime = Date.now() + 15000; } 
+        save(); renderGrid(); renderNumbers(); updateUI(); 
+    } 
+}
+
+function rand(n) { 
+    let s = salas[sSel]; 
+    mySelection = []; 
+    let avail = []; 
+    let takenNums = s.sold.map(x => x.n);
+    for(let i=1; i<=200; i++) if(!takenNums.includes(i)) avail.push(i); 
+    for(let i=0; i<n && avail.length>0; i++) mySelection.push(avail.splice(Math.floor(Math.random()*avail.length),1)[0]); 
+    renderNumbers(); 
+}
+
+function openM(t) { 
+    const c = document.getElementById('modal-content'); 
+    document.getElementById('modal').style.display='flex'; 
+    if(t==='auth') { 
+        c.innerHTML = `<h3>LOGIN</h3><input id="li-u" placeholder="Correo"><div class="password-wrapper"><input id="li-p" type="password" placeholder="Clave"><span class="eye-icon" onclick="togglePass('li-p')">👁️</span></div><button onclick="login()" style="width:100%; margin-top:10px;">ENTRAR</button><div class="auth-links"><span onclick="openM('reg')">Registrarse</span></div>`; 
+    } else if(t==='reg') { 
+        c.innerHTML = `<h3>REGISTRO</h3><input id="re-u" placeholder="Correo electrónico"><div class="password-wrapper"><input id="re-p" type="password" placeholder="Crear Clave"><span class="eye-icon" onclick="togglePass('re-p')">👁️</span></div><button onclick="register()" style="width:100%; margin-top:10px;">CREAR CUENTA</button>`; 
+    } else if(t==='dep') { 
+        c.innerHTML = `<h3>RECARGAR</h3><div class="wallet-box">TRC20: <b>TFtX2tLdjqTnTdVAUfQ8YNACv6QUAK9LAy</b></div><input id="dep-amt" type="number" placeholder="Monto $"><div class="upload-box" onclick="document.getElementById('f-in').click()">+ COMPROBANTE<input type="file" id="f-in" hidden onchange="previewFile()"><img id="preview-img"></div><button onclick="notificarPago()" style="width:100%">ENVIAR</button>`; 
+    } else if(t==='hist') { 
+        let myHist = historial.filter(h => h.u === currentU.u || h.u === 'ADMIN_GLOBAL');
+        c.innerHTML = `<h3>HISTORIAL</h3><div style="max-height:200px; overflow-y:auto; font-size:11px;">` + 
+        myHist.map(h => `<div style="border-bottom:1px solid #333; padding:5px;">${h.sala ? `SALA ${h.sala} - GANASTE $${h.premio} (Nº${h.ganador})` : h.msg} <br><small>${h.fecha}</small></div>`).join('') + `</div>`; 
+    } 
+    c.innerHTML += `<button onclick="closeM()" style="background:#444; margin-top:10px; width:100%;">CERRAR</button>`; 
+}
+
 function togglePass(id) { const el = document.getElementById(id); el.type = el.type === 'password' ? 'text' : 'password'; }
-function renderGrid() { const grid = document.getElementById('grid-salas'); grid.innerHTML = ""; salas.forEach((s, i) => { grid.innerHTML += `<div class="sala-card ${sSel===i?'active':''}" onclick="setSala(${i})"><b>SALA ${s.id}</b><div>${s.count}/200</div></div>`; }); }
-function renderNumbers() { const cont = document.getElementById('num-selector'); cont.innerHTML = ""; const s = salas[sSel]; for(let n=1; n<=200; n++) { const isSold = s.sold.includes(n), isSel = mySelection.includes(n); cont.innerHTML += `<button class="num-btn ${isSold?'taken':''} ${isSel?'selected':''}" onclick="${!isSold ? `toggleNum(${n})` : ''}">${n}</button>`; } document.getElementById('prog-txt').innerText = `${s.count} / 200 Vendidos`; }
+
+function renderGrid() { 
+    const grid = document.getElementById('grid-salas'); grid.innerHTML = ""; 
+    salas.forEach((s, i) => { grid.innerHTML += `<div class="sala-card ${sSel===i?'active':''}" onclick="setSala(${i})"><b>SALA ${s.id}</b><div>${s.count}/200</div></div>`; }); 
+}
+
+function renderNumbers() { 
+    const cont = document.getElementById('num-selector'); cont.innerHTML = ""; 
+    const s = salas[sSel]; 
+    let takenNums = s.sold.map(x => x.n);
+    for(let n=1; n<=200; n++) { 
+        const isSold = takenNums.includes(n), isSel = mySelection.includes(n); 
+        cont.innerHTML += `<button class="num-btn ${isSold?'taken':''} ${isSel?'selected':''}" onclick="${!isSold ? `toggleNum(${n})` : ''}">${n}</button>`; 
+    } 
+    document.getElementById('prog-txt').innerText = `${s.count} / 200 Vendidos`; 
+}
+
 function toggleNum(n) { if(mySelection.includes(n)) mySelection = mySelection.filter(x => x !== n); else mySelection.push(n); renderNumbers(); }
-function updateStatus() { let s = salas[sSel], st = document.getElementById('status-txt'); if(s.isSpinning) st.innerText = `GIRO ${s.currentGiro}...`; else if(s.isWaiting) st.innerText = `¡GANADOR: #${s.lastWinner}!`; else st.innerText = ""; }
-function save() { localStorage.setItem('GCT_SALAS_20', JSON.stringify(salas)); localStorage.setItem('GCT_MASTER_DB', JSON.stringify(users)); localStorage.setItem('GCT_HIST', JSON.stringify(historial)); localStorage.setItem('GCT_PENDING', JSON.stringify(pendingDeps)); }
-function showProfile() { document.getElementById('guest-btn').style.display='none'; document.getElementById('user-profile').style.display='block'; document.getElementById('prof-name').innerText = currentU.u; updateUI(); }
+
+function updateStatus() { 
+    let s = salas[sSel], st = document.getElementById('status-txt'); 
+    if(s.isSpinning) st.innerText = `GIRO ${s.currentGiro}...`; 
+    else if(s.isWaiting) st.innerText = `¡GANADOR: #${s.lastWinner}!`; 
+    else st.innerText = ""; 
+}
+
+function save() { 
+    localStorage.setItem('GCT_SALAS_20', JSON.stringify(salas)); 
+    localStorage.setItem('GCT_MASTER_DB', JSON.stringify(users)); 
+    localStorage.setItem('GCT_HIST', JSON.stringify(historial)); 
+    localStorage.setItem('GCT_PENDING', JSON.stringify(pendingDeps)); 
+}
+
+function showProfile() { 
+    document.getElementById('guest-btn').style.display='none'; 
+    document.getElementById('user-profile').style.display='block'; 
+    document.getElementById('prof-name').innerText = currentU.u; 
+    updateUI(); 
+}
+
 function updateUI() { if(currentU && currentU.u !== "ADMIN_GLOBAL") document.getElementById('prof-balance').innerText = `$${currentU.b.toFixed(2)}`; }
+
 function logout() { localStorage.removeItem('GCT_SESSION'); location.reload(); }
+
 function closeM() { document.getElementById('modal').style.display='none'; tempImg=""; }
-function register() { let u = document.getElementById('re-u').value, p = document.getElementById('re-p').value; users.push({u, p, b: 0}); save(); alert("Registrado"); openM('auth'); }
-function login() { let u = document.getElementById('li-u').value, p = document.getElementById('li-p').value; if(u==="ADMIN_GLOBAL" && p==="CASH_TIME_2026") { localStorage.setItem('GCT_SESSION', u); location.reload(); return; } let user = users.find(x=>x.u===u && x.p===p); if(user) { localStorage.setItem('GCT_SESSION', u); location.reload(); } else alert("Error"); }
-function previewFile() { const f = document.getElementById('f-in').files[0]; const r = new FileReader(); r.onloadend = () => { tempImg = r.result; let p = document.getElementById('preview-img'); p.src=tempImg; p.style.display='block'; }; if(f) r.readAsDataURL(f); }
-function notificarPago() { let a = parseFloat(document.getElementById('dep-amt').value); if(a > 0) { pendingDeps.push({ u: currentU.u, a: a }); save(); alert("Enviado."); closeM(); } }
-function renderAdmin() { const div = document.getElementById('pending-deps'); div.innerHTML = pendingDeps.length === 0 ? "Vacío" : ""; pendingDeps.forEach((p, idx) => { div.innerHTML += `<div class="admin-notif"><span>${p.u}: $${p.a}</span><button style="background:var(--green); border:none; padding:5px;" onclick="aprobar(${idx})">OK</button></div>`; }); }
-function aprobar(idx) { let u = users.find(x => x.u === pendingDeps[idx].u); if(u) u.b += pendingDeps[idx].a; pendingDeps.splice(idx, 1); save(); renderAdmin(); updateUI(); }
+
+function register() { 
+    let u = document.getElementById('re-u').value, p = document.getElementById('re-p').value; 
+    if(u && p) { users.push({u, p, b: 0}); save(); alert("Registrado"); openM('auth'); }
+}
+
+function login() { 
+    let u = document.getElementById('li-u').value, p = document.getElementById('li-p').value; 
+    if(u==="ADMIN_GLOBAL" && p==="CASH_TIME_2026") { localStorage.setItem('GCT_SESSION', u); location.reload(); return; } 
+    let user = users.find(x=>x.u===u && x.p===p); 
+    if(user) { localStorage.setItem('GCT_SESSION', u); location.reload(); } else alert("Error"); 
+}
+
+function previewFile() { 
+    const f = document.getElementById('f-in').files[0]; 
+    const r = new FileReader(); 
+    r.onloadend = () => { tempImg = r.result; let p = document.getElementById('preview-img'); p.src=tempImg; p.style.display='block'; }; 
+    if(f) r.readAsDataURL(f); 
+}
+
+function notificarPago() { 
+    let a = parseFloat(document.getElementById('dep-amt').value); 
+    if(a > 0 && tempImg) { 
+        pendingDeps.push({ u: currentU.u, a: a, img: tempImg }); 
+        save(); alert("Enviado."); closeM(); 
+    } else alert("Faltan datos");
+}
+
+function renderAdmin() { 
+    const div = document.getElementById('pending-deps'); 
+    div.innerHTML = pendingDeps.length === 0 ? "Vacío" : ""; 
+    pendingDeps.forEach((p, idx) => { 
+        div.innerHTML += `<div class="admin-notif">
+            <b>${p.u}: $${p.a}</b><br>
+            <img src="${p.img}" style="width:100px; cursor:pointer;" onclick="window.open(this.src)">
+            <div style="margin-top:5px;">
+                <button style="background:var(--green); border:none; padding:5px; width:45%;" onclick="aprobar(${idx})">APROBAR</button>
+                <button style="background:var(--red); border:none; padding:5px; width:45%; color:white;" onclick="rechazar(${idx})">RECHAZAR</button>
+            </div>
+        </div>`; 
+    }); 
+}
+
+function aprobar(idx) { 
+    let p = pendingDeps[idx];
+    let u = users.find(x => x.u === p.u); 
+    if(u) {
+        u.b += p.a; 
+        historial.push({ u: p.u, msg: `Depósito Aprobado: +$${p.a}`, fecha: new Date().toLocaleString() });
+    }
+    pendingDeps.splice(idx, 1); save(); renderAdmin(); updateUI(); 
+}
+
+function rechazar(idx) {
+    let p = pendingDeps[idx];
+    historial.push({ u: p.u, msg: `Depósito Rechazado: $${p.a}`, fecha: new Date().toLocaleString() });
+    pendingDeps.splice(idx, 1); save(); renderAdmin();
+}
 </script>
+
 </body>
 </html>
+
